@@ -6,7 +6,7 @@ variables:
 stages:
   - test
 
-test_kazoo:
+test_circus:
   tags:
     - aiops-dispatching-ci
   script:

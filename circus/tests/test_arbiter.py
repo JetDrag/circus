@@ -21,6 +21,7 @@ from circus.tests.support import (MockWatcher, has_circusweb,
                                   poll_for_callable, get_available_port)
 from circus import watcher as watcher_mod
 
+
 _GENERIC = os.path.join(os.path.dirname(__file__), 'generic.py')
 
 
@@ -555,7 +556,7 @@ class TestTrainer(TestCircus):
 
         ANY = '0.0.0.0'
 
-        multicast_addr, multicast_port = urlparse(DEFAULT_ENDPOINT_MULTICAST) \
+        multicast_addr, multicast_port = urlparse(DEFAULT_ENDPOINT_MULTICAST)\
             .netloc.split(':')
 
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM,
@@ -617,7 +618,6 @@ class TestArbiter(TestCircus):
     Unit tests for the arbiter class to codify requirements within
     behavior.
     """
-
     def test_start_with_callback(self):
         controller = "tcp://127.0.0.1:%d" % get_available_port()
         sub = "tcp://127.0.0.1:%d" % get_available_port()
@@ -718,8 +718,8 @@ class TestCircusWeb(TestCircus):
 
     @tornado.testing.gen_test
     def test_circushttpd(self):
-        controller = "tcp://127.0.0.1:9988"
-        sub = "tcp://127.0.0.1:9989"
+        controller = "tcp://127.0.0.1:%d" % get_available_port()
+        sub = "tcp://127.0.0.1:%d" % get_available_port()
 
         arbiter = Arbiter([], controller, sub, loop=get_ioloop(),
                           check_delay=-1, httpd=True, debug=True)

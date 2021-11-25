@@ -25,7 +25,7 @@ class TestValidateOption(TestCase):
             'stdout_stream', {'class': 'MyClass', 'my_option': '1'})
         validate_option(
             'stdout_stream', {'class': 'MyClass', 'refresh_time': 1})
-        self.assertIn(warn, (1, 2))
+        self.assertIn(warn.call_count, (1, 2))
 
     @patch('warnings.warn')
     def test_stderr_stream(self, warn):

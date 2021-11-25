@@ -1,5 +1,3 @@
-import cached_property
-
 try:
     import ctypes
 except MemoryError:
@@ -17,6 +15,7 @@ from subprocess import PIPE
 import time
 import shlex
 import warnings
+from cachetools import TTLCache, cachedmethod
 
 try:
     import resource
@@ -111,6 +110,13 @@ def get_status(proc):
         return proc.status()
     except TypeError:
         return proc.status
+
+
+children_cache = TTLCache(10240, 1)
+
+
+def cache_key(proc, recursive=False):
+    return proc.pid
 
 
 class Process(object):
@@ -528,7 +534,7 @@ class Process(object):
 
         return info
 
-    @cached_property.cached_property_with_ttl(1)
+    @cachedmethod(lambda _: children_cache, cache_key)
     def get_cached_children(self, *args, **kwargs):
         return get_children(*args, **kwargs)
 

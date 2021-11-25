@@ -2,8 +2,7 @@ import logging
 import os
 import warnings
 
-
-version_info = (0, 17, 2)
+version_info = (0, 17, 2, 'pre1')
 __version__ = ".".join(map(str, version_info))
 
 # This config call is done to avoid any
@@ -145,9 +144,9 @@ class ArbiterHandler(object):
 
     def _get_arbiter_klass(self, background):
         if background:
-            from circus.arbiter import ThreadedArbiter as Arbiter   # NOQA
+            from circus.arbiter import ThreadedArbiter as Arbiter  # NOQA
         else:
-            from circus.arbiter import Arbiter   # NOQA
+            from circus.arbiter import Arbiter  # NOQA
         return Arbiter
 
 

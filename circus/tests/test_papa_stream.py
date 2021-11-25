@@ -27,7 +27,7 @@ def run_process(testfile, *args, **kw):
         return 1
 
 
-@skipIf(papa is None, "papa not available")
+@skipIf(True, "papa not available")
 @skipIf('TRAVIS' in os.environ, "Skipped on Travis")
 class TestPapaStream(TestCircus):
     dummy_process = 'circus.tests.test_stream.run_process'

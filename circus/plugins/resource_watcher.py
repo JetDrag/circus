@@ -95,7 +95,7 @@ class ResourceWatcher(BaseObserver):
 
     def look_after(self):
         """仅支持单个watcher的增强改版处理策略"""
-        info = self.call("stats", name=self.watcher)
+        info = self.call("stats", name=self.watcher, cached=True)
 
         if info["status"] == "error":
             self.statsd.increment("_resource_watcher.%s.error" % self.watcher)

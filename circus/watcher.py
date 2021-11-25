@@ -24,7 +24,6 @@ from circus.util import papa
 
 
 class Watcher(object):
-
     """
     Class managing a list of processes for a given command.
 
@@ -340,7 +339,7 @@ class Watcher(object):
         parts = key.split('.', 1)
 
         stream_type = 'stdout' if parts[0] == 'stdout_stream' else 'stderr'
-        old_stream = self.stream_redirector.get_stream(stream_type) if\
+        old_stream = self.stream_redirector.get_stream(stream_type) if \
             self.stream_redirector else None
         if stream_type == 'stdout':
             self.stdout_stream_conf[parts[1]] = val
@@ -579,7 +578,7 @@ class Watcher(object):
     def remove_expired_processes(self):
         expired_processes = [p for p in self.processes.values()
                              if p.age() > (self.max_age + randint(0,
-                                           self.max_age_variance))]
+                                                                  self.max_age_variance))]
         removes = yield [self.kill_process(x) for x in expired_processes]
         for i, process in enumerate(expired_processes):
             if removes[i]:
@@ -726,7 +725,7 @@ class Watcher(object):
             try:
                 process.send_signal_child(child_pid, signum)
                 self.notify_event("kill", {"process_pid": child_pid,
-                                  "time": time.time()})
+                                           "time": time.time()})
             except NoSuchProcess:
                 # already dead !
                 pass
@@ -783,8 +782,8 @@ class Watcher(object):
         active_processes = self.get_active_processes()
         try:
             futures = [self.kill_process(process,
-                       stop_signal=stop_signal,
-                       graceful_timeout=graceful_timeout)
+                                         stop_signal=stop_signal,
+                                         graceful_timeout=graceful_timeout)
                        for process in active_processes]
             yield gen.multi(futures)
         except OSError as e:
@@ -830,9 +829,9 @@ class Watcher(object):
         return self._status
 
     @util.debuglog
-    def process_info(self, pid, extended=False):
+    def process_info(self, pid, extended=False, cached=False):
         process = self.processes[int(pid)]
-        result = process.info()
+        result = process.info(cached=cached)
         if extended and 'extended_stats' in self.hooks:
             self.hooks['extended_stats'](self, self.arbiter,
                                          'extended_stats',
@@ -840,8 +839,8 @@ class Watcher(object):
         return result
 
     @util.debuglog
-    def info(self, extended=False):
-        result = dict([(proc.pid, proc.info())
+    def info(self, extended=False, cached=False):
+        result = dict([(proc.pid, proc.info(cached=cached))
                        for proc in self.processes.values()])
         if extended and 'extended_stats' in self.hooks:
             for pid, stats in result.items():
@@ -866,7 +865,7 @@ class Watcher(object):
         if not skip:
             logger.debug('stopping the %s watcher' % self.name)
             logger.debug('gracefully stopping processes [%s] for %ss' % (
-                         self.name, self.graceful_timeout))
+                self.name, self.graceful_timeout))
             # We ignore the hook result
             self.call_hook('before_stop')
             yield self.kill_processes()
@@ -1091,7 +1090,7 @@ class Watcher(object):
 
         if key in self._options:
             self._options[key] = val
-            action = -1    # XXX for now does not trigger a reload
+            action = -1  # XXX for now does not trigger a reload
         elif key == "numprocesses":
             val = int(val)
             if val < 0:

@@ -1,12 +1,14 @@
+import cached_property
+
 try:
     import ctypes
 except MemoryError:
     # selinux execmem denial
     # https://bugzilla.redhat.com/show_bug.cgi?id=488396
-    ctypes = None       # NOQA
+    ctypes = None  # NOQA
 except ImportError:
     # Python on Solaris compiled with Sun Studio doesn't have ctypes
-    ctypes = None       # NOQA
+    ctypes = None  # NOQA
 
 import sys
 import errno
@@ -15,10 +17,11 @@ from subprocess import PIPE
 import time
 import shlex
 import warnings
+
 try:
     import resource
 except ImportError:
-    resource = None     # NOQA
+    resource = None  # NOQA
 
 from psutil import (Popen, STATUS_ZOMBIE, STATUS_DEAD, NoSuchProcess,
                     AccessDenied)
@@ -30,10 +33,8 @@ from circus.util import (get_info, to_uid, to_gid, debuglog, get_working_dir,
                          get_username_from_uid, IS_WINDOWS)
 from circus import logger
 
-
 _INFOLINE = ("%(pid)s  %(cmdline)s %(username)s %(nice)s %(mem_info1)s "
              "%(mem_info2)s %(cpu)s %(mem)s %(ctime)s")
-
 
 RUNNING = 0
 DEAD_OR_ZOMBIE = 1
@@ -170,6 +171,7 @@ class Process(object):
     - **close_child_stderr**: If True, redirects the child process' stdout
       to /dev/null after the fork. default: False.
     """
+
     def __init__(self, name, wid, cmd, args=None, working_dir=None,
                  shell=False, uid=None, gid=None, env=None, rlimits=None,
                  executable=None, use_fds=False, watcher=None, spawn=True,
@@ -386,15 +388,15 @@ class Process(object):
 
         if self.watcher is not None:
             for option in self.watcher.optnames:
-                if option not in format_kwargs\
+                if option not in format_kwargs \
                         and hasattr(self.watcher, option):
                     format_kwargs[option] = getattr(self.watcher, option)
 
         cmd = replace_gnu_args(self.cmd, **format_kwargs)
 
         if '$WID' in cmd or (self.args and '$WID' in self.args):
-            msg = "Using $WID in the command is deprecated. You should use "\
-                  "the python string format instead. In your case, this "\
+            msg = "Using $WID in the command is deprecated. You should use " \
+                  "the python string format instead. In your case, this " \
                   "means replacing the $WID in your command by $(WID)."
 
             warnings.warn(msg, DeprecationWarning)
@@ -495,7 +497,7 @@ class Process(object):
         """Return the age of the process in seconds."""
         return time.time() - self.started
 
-    def info(self):
+    def info(self, cached=False):
         """Return process info.
 
         The info returned is a mapping with these keys:
@@ -519,10 +521,15 @@ class Process(object):
         info["started"] = self.started
         info["children"] = []
         info['wid'] = self.wid
-        for child in get_children(self._worker):
+        get_children_func = self.get_cached_children if cached else get_children
+        for child in get_children_func(self._worker):
             info["children"].append(get_info(child))
 
         return info
+
+    @cached_property.cached_property_with_ttl(1)
+    def get_cached_children(self, *args, **kwargs):
+        return get_children(*args, **kwargs)
 
     def children(self, recursive=False):
         """Return a list of children pids."""

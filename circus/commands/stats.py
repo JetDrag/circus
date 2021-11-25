@@ -93,13 +93,14 @@ class Stats(Command):
             raise ArgumentError("message invalid")
 
         extended = opts.get("extended", False)
+        cached = opts.get("cached", False)
         if len(args) == 2:
             return self.make_message(name=args[0], process=int(args[1]),
-                                     extended=extended)
+                                     extended=extended, cached=cached)
         elif len(args) == 1:
-            return self.make_message(name=args[0], extended=extended)
+            return self.make_message(name=args[0], extended=extended, cached=cached)
         else:
-            return self.make_message(extended=extended)
+            return self.make_message(extended=extended, cached=cached)
 
     def execute(self, arbiter, props):
         if 'name' in props:
@@ -109,14 +110,14 @@ class Stats(Command):
                     return {
                         "process": props['process'],
                         "info": watcher.process_info(props['process'],
-                                                     props.get('extended')),
+                                                     props.get('extended'), cached=props.get('cached')),
                     }
                 except KeyError:
                     raise MessageError("process %r not found in %r" % (
                         props['process'], props['name']))
             else:
                 return {"name": props['name'],
-                        "info": watcher.info(props.get('extended'))}
+                        "info": watcher.info(props.get('extended'), cached=props.get('cached'))}
         else:
             infos = {}
             for watcher in arbiter.watchers:

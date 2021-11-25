@@ -1,7 +1,6 @@
 from circus.tests.support import TestCircus, EasyTestSuite
 from circus.commands.stats import Stats, MessageError
 
-
 _WANTED = """\
 foo:
 one: 1233  xx tarek false 132 132 13 123 xx
@@ -12,7 +11,7 @@ one: 1233  xx tarek false 132 132 13 123 xx
 class FakeWatcher(object):
     name = 'one'
 
-    def info(self, *args):
+    def info(self, *args, **kwargs):
         if len(args) == 2 and args[0] == 'meh':
             raise KeyError('meh')
         return 'yeah'

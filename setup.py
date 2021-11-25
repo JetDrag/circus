@@ -6,19 +6,17 @@ from setuptools import find_packages, setup
 if not hasattr(sys, 'version_info') or sys.version_info < (3, 5, 0, 'final'):
     raise SystemExit("Circus requires Python 3.5 or higher.")
 
-
-install_requires = ['psutil', 'pyzmq>=17.0', 'tornado>=5.0.2']
+install_requires = ['psutil', 'pyzmq>=17.0', 'tornado>=5.0.2', 'cached_property']
 
 try:
-    import argparse     # NOQA
+    import argparse  # NOQA
 except ImportError:
     install_requires.append('argparse')
 
 with open("README.md") as f:
     README = f.read()
 
-
-setup(name='circus',
+setup(name='bk-circus',
       version=__version__,
       packages=find_packages(exclude=["docs", "examples"]),
       description=("Circus is a program that will let you run and watch "
@@ -39,18 +37,18 @@ setup(name='circus',
       ],
       install_requires=install_requires,
       extras_require={
-        'test': [
-            'nose',
-            'nose-cov',
-            'coverage',
-            'mock',
-            'circus-web',
-            'gevent',
-            'papa',
-            'PyYAML',
-            'pyzmq>=17.0',
-            'flake8==2.1.0',
-        ],
+          'test': [
+              'nose',
+              'nose-cov',
+              'coverage',
+              'mock',
+              'circus-web',
+              'gevent',
+              'papa',
+              'PyYAML',
+              'pyzmq>=17.0',
+              'flake8==2.1.0',
+          ],
       },
       test_suite='circus.tests',
       entry_points="""

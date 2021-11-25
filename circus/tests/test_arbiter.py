@@ -720,7 +720,7 @@ class TestCircusWeb(TestCircus):
     def test_circushttpd(self):
         controller = "tcp://127.0.0.1:%d" % get_available_port()
         sub = "tcp://127.0.0.1:%d" % get_available_port()
-        httpd_port = "tcp://127.0.0.1:%d" % get_available_port()
+        httpd_port = get_available_port()
 
         arbiter = Arbiter([], controller, sub, loop=get_ioloop(), httpd_port=httpd_port,
                           check_delay=-1, httpd=True, debug=True)

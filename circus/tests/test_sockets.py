@@ -176,7 +176,7 @@ class TestSockets(TestCase):
             sock.close()
 
     def test_inet6(self):
-        config = {'name': '', 'host': '::1', 'port': 0,
+        config = {'name': '', 'host': '::', 'port': 0,
                   'family': 'AF_INET6'}
         sock = CircusSocket.load_from_config(config)
         self.assertEqual(sock.host, config['host'])

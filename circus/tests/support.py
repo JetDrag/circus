@@ -1,5 +1,7 @@
 from tempfile import mkstemp, mkdtemp
+import os
 import signal
+import sys
 from time import time, sleep
 from collections import defaultdict
 import cProfile
@@ -7,6 +9,7 @@ import pstats
 import shutil
 import functools
 import multiprocessing
+import socket
 import sysconfig
 import concurrent
 
@@ -22,28 +25,6 @@ from circus.util import DEFAULT_ENDPOINT_DEALER, DEFAULT_ENDPOINT_SUB
 from circus.util import tornado_sleep, ConflictError
 from circus.util import IS_WINDOWS
 from circus.watcher import Watcher
-
-import os
-import random
-import socket
-import sys
-
-_PROTOS = [(socket.SOCK_STREAM, socket.IPPROTO_TCP),
-           (socket.SOCK_DGRAM, socket.IPPROTO_UDP)]
-
-# Ports that are currently available to be given out.
-_free_ports = set()
-
-# Ports that are reserved or from the portserver that may be returned.
-_owned_ports = set()
-
-# Ports that we chose randomly that may be returned.
-_random_ports = set()
-
-
-class NoFreePortFoundError(Exception):
-    """Exception indicating that no free port could be found."""
-
 
 DEBUG = sysconfig.get_config_var('Py_DEBUG') == 1
 
@@ -74,86 +55,12 @@ def get_ioloop():
 
 
 def get_available_port():
-    """Pick an available network port without the help of a port server.
-
-    This code ensures that the port is available on both TCP and UDP.
-
-    This function is an implementation detail of PickUnusedPort(), and
-    should not be called by code outside of this module.
-
-    Returns:
-      A port number that is unused on both TCP and UDP.
-
-    Raises:
-      NoFreePortFoundError: No free port could be found.
-    """
-    # Try random ports first.
-    rng = random.Random()
-    for _ in range(10):
-        port = int(rng.randrange(15000, 25000))
-        if is_port_free(port):
-            _random_ports.add(port)
-            return port
-
-    # Next, try a few times to get an OS-assigned port.
-    # Ambrose discovered that on the 2.6 kernel, calling Bind() on UDP socket
-    # returns the same port over and over. So always try TCP first.
-    for _ in range(10):
-        # Ask the OS for an unused port.
-        port = bind(0, _PROTOS[0][0], _PROTOS[0][1])
-        # Check if this port is unused on the other protocol.
-        if port and bind(port, _PROTOS[1][0], _PROTOS[1][1]):
-            _random_ports.add(port)
-            return port
-
-
-def is_port_free(port):
-    """Check if specified port is free.
-
-    Args:
-      port: integer, port to check
-    Returns:
-      boolean, whether it is free to use for both TCP and UDP
-    """
-    return bind(port, *_PROTOS[0]) and bind(port, *_PROTOS[1])
-
-
-def bind(port, socket_type, socket_proto):
-    """Try to bind to a socket of the specified type, protocol, and port.
-
-    This is primarily a helper function for PickUnusedPort, used to see
-    if a particular port number is available.
-
-    For the port to be considered available, the kernel must support at least
-    one of (IPv6, IPv4), and the port must be available on each supported
-    family.
-
-    Args:
-      port: The port number to bind to, or 0 to have the OS pick a free port.
-      socket_type: The type of the socket (ex: socket.SOCK_STREAM).
-      socket_proto: The protocol of the socket (ex: socket.IPPROTO_TCP).
-
-    Returns:
-      The port number on success or None on failure.
-    """
-    got_socket = False
-    for family in (socket.AF_INET6, socket.AF_INET):
-        try:
-            sock = socket.socket(family, socket_type, socket_proto)
-            got_socket = True
-        except socket.error:
-            continue
-        try:
-            sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            sock.bind(('', port))
-            if socket_type == socket.SOCK_STREAM:
-                sock.listen(1)
-            port = sock.getsockname()[1]
-        except socket.error:
-            return None
-        finally:
-            sock.close()
-    return port if got_socket else None
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        s.bind(("", 0))
+        return s.getsockname()[1]
+    finally:
+        s.close()
 
 
 class MockWatcher(Watcher):

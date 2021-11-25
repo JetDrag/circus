@@ -1,0 +1,29 @@
+variables:
+  LANG: "en_US.utf-8"
+  LC_ALL: "en_US.utf-8"
+  ARROW_PRE_0_15_IPC_FORMAT: 1
+
+stages:
+  - test
+
+test_kazoo:
+  tags:
+    - aiops-dispatching-ci
+  script:
+    - source /data/mapleleaf/venv/bin/activate
+    - echo "do kazoo test!"
+    - export ZOOKEEPER_VERSION=3.4.14
+    - export ZOOKEEPER_PATH=$PWD/zookeeper/3.4.14
+    - /data/mapleleaf/zookeeper-3.4.9/bin/zkCli.sh rmr /aiops
+    - rabbitmqctl stop_app && rabbitmqctl reset && rabbitmqctl start_app
+    - redis-cli flushall
+    - rm -r prometheus/dispatching-metric || true
+    - mysql -h127.0.0.1 -p'example' -uroot -P3306 -e "create DATABASE IF NOT EXISTS dispatching;"
+    - mkdir -p prometheus/dispatching-metric || true
+    - mkdir -p working/logs || true
+    - tar -zxvf zookeeper.tgz
+    - /data/mapleleaf/venv/bin/pip install -U tox
+    - /data/mapleleaf/venv/bin/tox
+    - kill -9 $(ps -ef|grep entry  | grep -v grep | awk '{print $2}')  || true
+    - kill -9 $(ps -ef|grep pytest  | grep -v grep | awk '{print $2}')  || true
+    - kill -9 $(ps -ef|grep circus  | grep -v grep | awk '{print $2}')  || true

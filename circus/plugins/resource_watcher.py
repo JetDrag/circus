@@ -22,7 +22,7 @@ class ResourceWatcher(BaseObserver):
             self.loop.close()
             raise NotImplementedError('watcher is mandatory for now.')
 
-        self.max_cpu = float(config.get("max_cpu", 90))     # in %
+        self.max_cpu = float(config.get("max_cpu", 90))  # in %
         self.max_mem = config.get("max_mem")
 
         if self.max_mem is None:
@@ -30,25 +30,25 @@ class ResourceWatcher(BaseObserver):
             self._max_percent = True
         else:
             try:
-                self.max_mem = float(self.max_mem)          # float -> %
+                self.max_mem = float(self.max_mem)  # float -> %
                 self._max_percent = True
             except ValueError:
-                self.max_mem = human2bytes(self.max_mem)    # int -> absolute
+                self.max_mem = human2bytes(self.max_mem)  # int -> absolute
                 self._max_percent = False
 
         self.min_cpu = config.get("min_cpu")
         if self.min_cpu is not None:
-            self.min_cpu = float(self.min_cpu)              # in %
+            self.min_cpu = float(self.min_cpu)  # in %
         self.min_mem = config.get("min_mem")
         if self.min_mem is not None:
             try:
-                self.min_mem = float(self.min_mem)          # float -> %
+                self.min_mem = float(self.min_mem)  # float -> %
                 self._min_percent = True
             except ValueError:
-                self.min_mem = human2bytes(self.min_mem)    # int -> absolute
+                self.min_mem = human2bytes(self.min_mem)  # int -> absolute
                 self._min_percent = True
         self.health_threshold = float(config.get("health_threshold",
-                                      75))  # in %
+                                                 75))  # in %
         self.max_count = int(config.get("max_count", 3))
 
         self.process_children = to_bool(config.get("process_children", '0'))
@@ -59,25 +59,6 @@ class ResourceWatcher(BaseObserver):
         self._count_under_cpu = {}
         self._count_under_mem = {}
         self._count_health = {}
-
-    def look_after(self):
-        info = self.call("stats", name=self.watcher)
-
-        if info["status"] == "error":
-            self.statsd.increment("_resource_watcher.%s.error" % self.watcher)
-            return
-
-        stats = info['info']
-
-        self._process_index('parent', self._collect_data(stats))
-        if not self.process_children:
-            return
-
-        for sub_info in stats.values():
-            if isinstance(sub_info, dict):
-                for child_info in sub_info['children']:
-                    data = self._collect_data({child_info['pid']: child_info})
-                    self._process_index(child_info['pid'], data)
 
     def _collect_data(self, stats):
         data = {}
@@ -112,13 +93,37 @@ class ResourceWatcher(BaseObserver):
 
         return data
 
-    def _process_index(self, index, stats):
+    def look_after(self):
+        """仅支持单个watcher的增强改版处理策略"""
+        info = self.call("stats", name=self.watcher)
 
-        if (index not in self._count_over_cpu or
-                index not in self._count_over_mem or
-                index not in self._count_under_cpu or
-                index not in self._count_under_mem or
-                index not in self._count_health):
+        if info["status"] == "error":
+            self.statsd.increment("_resource_watcher.%s.error" % self.watcher)
+            return
+
+        stats = info['info']
+        if not stats:
+            return
+        index = list(stats.keys())[0]
+        self._process_index(index, self._collect_data(stats))
+
+    def _process_index(self, index, stats):
+        """仅支持单个watcher的增强改版处理策略"""
+        if (index not in self._count_over_cpu or index not in self._count_over_mem or index not in self._count_under_cpu
+                or index not in self._count_under_mem or index not in self._count_health):
+            self._reset_index(index)
+
+        if not hasattr(self, 'looped'):
+            self.looped = 0
+
+        self.looped += 1
+
+        if not hasattr(self, 'singled'):
+            self.singled = [index, 0]
+            self._reset_index(index)
+
+        if self.singled and self.singled[0] != index:
+            self.singled = [index, 0]
             self._reset_index(index)
 
         if self.max_cpu and stats['max_cpu'] > self.max_cpu:
@@ -136,10 +141,8 @@ class ResourceWatcher(BaseObserver):
             self._count_under_cpu[index] = 0
 
         if self.max_mem is not None:
-            over_percent = (self._max_percent and
-                            stats['max_mem'] > self.max_mem)
-            over_value = (not self._max_percent and
-                          stats['max_mem_abs'] > self.max_mem)
+            over_percent = (self._max_percent and stats['max_mem'] > self.max_mem)
+            over_value = (not self._max_percent and stats['max_mem_abs'] > self.max_mem)
 
             if over_percent or over_value:
                 self.statsd.increment("_resource_watcher.%s.over_memory" %
@@ -151,10 +154,8 @@ class ResourceWatcher(BaseObserver):
             self._count_over_mem[index] = 0
 
         if self.min_mem is not None:
-            under_percent = (self._min_percent and
-                             stats['min_mem'] < self.min_mem)
-            under_value = (not self._min_percent and
-                           stats['min_mem_abs'] < self.min_mem)
+            under_percent = (self._min_percent and stats['min_mem'] < self.min_mem)
+            under_value = (not self._min_percent and stats['min_mem_abs'] < self.min_mem)
 
             if under_percent or under_value:
                 self.statsd.increment("_resource_watcher.%s.under_memory" %
@@ -165,36 +166,33 @@ class ResourceWatcher(BaseObserver):
         else:
             self._count_under_mem[index] = 0
 
-        max_cpu = stats['max_cpu']
-        max_mem = stats['max_mem']
-
-        if (self.health_threshold and
-                (max_cpu + max_mem) / 2.0 > self.health_threshold):
-            self.statsd.increment("_resource_watcher.%s.over_health" %
-                                  self.watcher)
-            self._count_health[index] += 1
-        else:
-            self._count_health[index] = 0
-
         if max([self._count_over_cpu[index], self._count_under_cpu[index],
                 self._count_over_mem[index], self._count_under_mem[index],
                 self._count_health[index]]) > self.max_count:
             self.statsd.increment("_resource_watcher.%s.restarting" %
                                   self.watcher)
-
-            # todo: restart only process instead of the whole watcher
-            if index == 'parent':
-                self.cast("restart", name=self.watcher)
-                self._reset_index(index)
+            # 传入特定信号以raise特定ResourceError
+            if self.singled[1] < self.max_count * 2:
+                if self.singled[1] == 0:
+                    self.cast(
+                        "signal",
+                        name=self.watcher,
+                        signum=signal.SIGXCPU,
+                        recursive=True,
+                    )
+                self.singled[1] += 1
             else:
+                # 多次signal失败后，强杀
                 self.cast(
                     "signal",
                     name=self.watcher,
-                    signum=self.child_signal,
-                    child_pid=index
+                    signum=signal.SIGKILL,
+                    recursive=True,
                 )
-                self._remove_index(index)
+                self.singled[1] = 0
+                self._reset_index(index)
 
+        if self.looped % (self.max_count * 2) == 0:
             self._reset_index(index)
 
     def _reset_index(self, index):

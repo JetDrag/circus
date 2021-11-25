@@ -718,8 +718,8 @@ class TestCircusWeb(TestCircus):
 
     @tornado.testing.gen_test
     def test_circushttpd(self):
-        controller = "tcp://127.0.0.1:%d" % get_available_port() + 1
-        sub = "tcp://127.0.0.1:%d" % get_available_port() + 1
+        controller = "tcp://127.0.0.1:%d" % int(get_available_port()) + 1
+        sub = "tcp://127.0.0.1:%d" % int(get_available_port()) + 1
 
         arbiter = Arbiter([], controller, sub, loop=get_ioloop(),
                           check_delay=-1, httpd=True, debug=True)

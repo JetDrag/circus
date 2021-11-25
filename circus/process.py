@@ -521,7 +521,8 @@ class Process(object):
         info["started"] = self.started
         info["children"] = []
         info['wid'] = self.wid
-        get_children_func = self.get_cached_children if cached else get_children
+        get_children_func = self.get_cached_children \
+            if cached else get_children
         for child in get_children_func(self._worker):
             info["children"].append(get_info(child))
 

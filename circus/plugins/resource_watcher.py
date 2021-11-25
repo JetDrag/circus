@@ -109,8 +109,11 @@ class ResourceWatcher(BaseObserver):
 
     def _process_index(self, index, stats):
         """仅支持单个watcher的增强改版处理策略"""
-        if (index not in self._count_over_cpu or index not in self._count_over_mem or index not in self._count_under_cpu
-                or index not in self._count_under_mem or index not in self._count_health):
+        if (index not in self._count_over_cpu or
+                index not in self._count_over_mem or
+                index not in self._count_under_cpu or
+                index not in self._count_under_mem or
+                index not in self._count_health):
             self._reset_index(index)
 
         if not hasattr(self, 'looped'):
@@ -141,8 +144,10 @@ class ResourceWatcher(BaseObserver):
             self._count_under_cpu[index] = 0
 
         if self.max_mem is not None:
-            over_percent = (self._max_percent and stats['max_mem'] > self.max_mem)
-            over_value = (not self._max_percent and stats['max_mem_abs'] > self.max_mem)
+            over_percent = (self._max_percent and stats['max_mem'] >
+                            self.max_mem)
+            over_value = (not self._max_percent and stats['max_mem_abs'] >
+                          self.max_mem)
 
             if over_percent or over_value:
                 self.statsd.increment("_resource_watcher.%s.over_memory" %
@@ -154,8 +159,10 @@ class ResourceWatcher(BaseObserver):
             self._count_over_mem[index] = 0
 
         if self.min_mem is not None:
-            under_percent = (self._min_percent and stats['min_mem'] < self.min_mem)
-            under_value = (not self._min_percent and stats['min_mem_abs'] < self.min_mem)
+            under_percent = (self._min_percent and stats['min_mem'] <
+                             self.min_mem)
+            under_value = (not self._min_percent and stats['min_mem_abs'] <
+                           self.min_mem)
 
             if under_percent or under_value:
                 self.statsd.increment("_resource_watcher.%s.under_memory" %

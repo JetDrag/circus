@@ -13,7 +13,8 @@ import socket
 import sysconfig
 import concurrent
 
-from unittest import skip, skipIf, TestCase, TestSuite, findTestCases  # noqa: F401
+from unittest import skip, skipIf, TestCase, TestSuite, \
+    findTestCases  # noqa: F401
 
 from tornado.testing import AsyncTestCase
 from unittest import mock
@@ -73,7 +74,6 @@ class MockWatcher(Watcher):
 
 
 class TestCircus(AsyncTestCase):
-
     arbiter_factory = get_arbiter
     arbiters = []
 
@@ -247,12 +247,14 @@ class TestCircus(AsyncTestCase):
 
 def profile(func):
     """Can be used to dump profile stats"""
+
     def _profile(*args, **kw):
         profiler = cProfile.Profile()
         try:
             return profiler.runcall(func, *args, **kw)
         finally:
             pstats.Stats(profiler).sort_stats('time').print_stats(30)
+
     return _profile
 
 
@@ -303,7 +305,7 @@ def run_process(test_file):
 
 def has_gevent():
     try:
-        import gevent       # NOQA
+        import gevent  # NOQA
         return True
     except ImportError:
         return False
@@ -311,7 +313,7 @@ def has_gevent():
 
 def has_circusweb():
     try:
-        import circusweb       # NOQA
+        import circusweb  # NOQA
         return True
     except ImportError:
         return False

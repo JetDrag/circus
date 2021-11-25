@@ -393,7 +393,8 @@ class TestConfig(TestCase):
         watcher.stop()
 
     def test_syslog_configuration(self):
-        # this test will fail, if the syslog formatter is configured incorrectly
+        # this test will fail,
+        # if the syslog formatter is configured incorrectly
         configure_logger(None, output='syslog://localhost:514?test')
 
 

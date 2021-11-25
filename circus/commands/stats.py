@@ -98,7 +98,8 @@ class Stats(Command):
             return self.make_message(name=args[0], process=int(args[1]),
                                      extended=extended, cached=cached)
         elif len(args) == 1:
-            return self.make_message(name=args[0], extended=extended, cached=cached)
+            return self.make_message(name=args[0],
+                                     extended=extended, cached=cached)
         else:
             return self.make_message(extended=extended, cached=cached)
 
@@ -109,15 +110,18 @@ class Stats(Command):
                 try:
                     return {
                         "process": props['process'],
-                        "info": watcher.process_info(props['process'],
-                                                     props.get('extended'), cached=props.get('cached')),
+                        "info": watcher.process_info(
+                            props['process'],
+                            props.get('extended'),
+                            cached=props.get('cached')),
                     }
                 except KeyError:
                     raise MessageError("process %r not found in %r" % (
                         props['process'], props['name']))
             else:
                 return {"name": props['name'],
-                        "info": watcher.info(props.get('extended'), cached=props.get('cached'))}
+                        "info": watcher.info(props.get('extended'),
+                                             cached=props.get('cached'))}
         else:
             infos = {}
             for watcher in arbiter.watchers:

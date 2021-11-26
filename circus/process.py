@@ -112,7 +112,8 @@ def get_status(proc):
         return proc.status
 
 
-children_cache = TTLCache(10240, 1)
+children_ttl = os.environ.get('CIRCUS_PROCESS_CHILDREN_TTL', '5')
+children_cache = TTLCache(10240, int(children_ttl))
 
 
 def cache_key(proc, recursive=False):

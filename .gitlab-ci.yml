@@ -15,15 +15,8 @@ test_circus:
     - kill -9 $(ps -ef|grep circus  | grep -v grep | awk '{print $2}')  || true
     - kill -9 $(ps -ef|grep tox  | grep -v grep | awk '{print $2}')  || true
     - source /data/mapleleaf/venv/bin/activate
-    - echo "do kazoo test!"
-    - export ZOOKEEPER_VERSION=3.4.14
-    - export ZOOKEEPER_PATH=$PWD/zookeeper/3.4.14
-    - /data/mapleleaf/zookeeper-3.4.9/bin/zkCli.sh rmr /aiops
-    - rabbitmqctl stop_app && rabbitmqctl reset && rabbitmqctl start_app
+    - echo "do circus test!"
     - redis-cli flushall
-    - rm -r prometheus/dispatching-metric || true
-    - mysql -h127.0.0.1 -p'example' -uroot -P3306 -e "create DATABASE IF NOT EXISTS dispatching;"
-    - mkdir -p prometheus/dispatching-metric || true
     - mkdir -p working/logs || true
     - /data/mapleleaf/venv/bin/pip install -U tox
     - /data/mapleleaf/venv/bin/tox

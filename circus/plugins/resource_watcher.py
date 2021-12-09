@@ -1,5 +1,6 @@
 import signal
 import warnings
+
 from circus.plugins.statsd import BaseObserver
 from circus.util import to_bool
 from circus.util import human2bytes
@@ -94,7 +95,7 @@ class ResourceWatcher(BaseObserver):
         return data
 
     def look_after(self):
-        """仅支持单个watcher的增强改版处理策略"""
+        """仅支持单进程watcher的增强版处理策略"""
         info = self.call("stats", name=self.watcher, cached=True)
 
         if info["status"] == "error":
@@ -104,8 +105,18 @@ class ResourceWatcher(BaseObserver):
         stats = info['info']
         if not stats:
             return
+        self.overlay_children_stats(stats, stats)
+
         index = list(stats.keys())[0]
         self._process_index(index, self._collect_data(stats))
+
+    def overlay_children_stats(self, stats, root_stats):
+        """将子进程资源占用合并入主进程"""
+        children_stats = stats.get('children')
+        if children_stats:
+            for k in ["mem_info1", "mem_info2", "cpu", "mem", "ctime"]:
+                root_stats[k] += children_stats[k]
+            self.overlay_children_stats(children_stats, root_stats)
 
     def _process_index(self, index, stats):
         """仅支持单个watcher的增强改版处理策略"""

@@ -1,4 +1,5 @@
 from circus.commands.base import Command
+from circus.commands.restart import execute_watcher_start_stop_restart
 from circus.commands.util import validate_option
 from circus.exc import ArgumentError, MessageError
 from circus.config import rlimit_value
@@ -92,10 +93,12 @@ class AddWatcher(Command):
                 del options['rlimit_' + key]
 
         # now create and start the watcher
-        watcher = arbiter.add_watcher(props['name'], props['cmd'],
-                                      args=props.get('args'), **options)
+        arbiter.add_watcher(props['name'], props['cmd'],
+                            args=props.get('args'), **options)
         if props.get('start', False):
-            return watcher.start()
+            return execute_watcher_start_stop_restart(
+                self, arbiter, props, 'start', arbiter.start_watchers,
+                arbiter.start_watchers)
 
     def validate(self, props):
         super(AddWatcher, self).validate(props)

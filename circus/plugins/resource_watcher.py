@@ -77,12 +77,12 @@ class ResourceWatcher(BaseObserver):
                                 human2bytes(sub_info['mem_info1']))
 
         if cpus:
-            data['max_cpu'] = max(cpus)
-            data['max_mem'] = max(mems)
-            data['max_mem_abs'] = max(mems_abs)
-            data['min_cpu'] = min(cpus)
-            data['min_mem'] = min(mems)
-            data['min_mem_abs'] = min(mems_abs)
+            data['max_cpu'] = sum(cpus)
+            data['max_mem'] = sum(mems)
+            data['max_mem_abs'] = sum(mems_abs)
+            data['min_cpu'] = sum(cpus)
+            data['min_mem'] = sum(mems)
+            data['min_mem_abs'] = sum(mems_abs)
         else:
             # we dont' have any process running. max = 0 then
             data['max_cpu'] = 0
@@ -105,18 +105,16 @@ class ResourceWatcher(BaseObserver):
         stats = info['info']
         if not stats:
             return
-        self.overlay_children_stats(stats, stats)
+        self.overlay_children_stats(stats.get('children', []), stats)
 
         index = list(stats.keys())[0]
         self._process_index(index, self._collect_data(stats))
 
-    def overlay_children_stats(self, stats, root_stats):
+    def overlay_children_stats(self, children_stats, root_stats):
         """将子进程资源占用合并入主进程"""
-        children_stats = stats.get('children')
-        if children_stats:
-            for k in ["mem_info1", "mem_info2", "cpu", "mem", "ctime"]:
-                root_stats[k] += children_stats[k]
-            self.overlay_children_stats(children_stats, root_stats)
+        for child_stats in children_stats:
+            root_stats[child_stats['pid']] = child_stats
+            self.overlay_children_stats(child_stats.get('children', []), root_stats)
 
     def _process_index(self, index, stats):
         """仅支持单个watcher的增强改版处理策略"""

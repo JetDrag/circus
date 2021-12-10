@@ -93,12 +93,10 @@ class AddWatcher(Command):
                 del options['rlimit_' + key]
 
         # now create and start the watcher
-        arbiter.add_watcher(props['name'], props['cmd'],
-                            args=props.get('args'), **options)
+        watcher = arbiter.add_watcher(props['name'], props['cmd'],
+                                      args=props.get('args'), **options)
         if props.get('start', False):
-            return execute_watcher_start_stop_restart(
-                self, arbiter, props, 'start', arbiter.start_watchers,
-                arbiter.start_watchers)
+            return watcher.start()
 
     def validate(self, props):
         super(AddWatcher, self).validate(props)

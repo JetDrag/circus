@@ -114,7 +114,8 @@ class ResourceWatcher(BaseObserver):
         """将子进程资源占用合并入主进程"""
         for child_stats in children_stats:
             root_stats[child_stats['pid']] = child_stats
-            self.overlay_children_stats(child_stats.get('children', []), root_stats)
+            self.overlay_children_stats(child_stats.get('children', []),
+                                        root_stats)
 
     def _process_index(self, index, stats):
         """仅支持单个watcher的增强改版处理策略"""

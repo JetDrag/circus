@@ -60,6 +60,8 @@ class ResourceWatcher(BaseObserver):
         self._count_under_cpu = {}
         self._count_under_mem = {}
         self._count_health = {}
+        self.looped = 0
+        self.singled = {}
 
     def _collect_data(self, stats):
         data = {}
@@ -107,8 +109,7 @@ class ResourceWatcher(BaseObserver):
             return
         self.overlay_children_stats(stats.get('children', []), stats)
 
-        index = list(stats.keys())[0]
-        self._process_index(index, self._collect_data(stats))
+        self._process_index('__all__', self._collect_data(stats))
 
     def overlay_children_stats(self, children_stats, root_stats):
         """将子进程资源占用合并入主进程"""
@@ -124,19 +125,6 @@ class ResourceWatcher(BaseObserver):
                 index not in self._count_under_cpu or
                 index not in self._count_under_mem or
                 index not in self._count_health):
-            self._reset_index(index)
-
-        if not hasattr(self, 'looped'):
-            self.looped = 0
-
-        self.looped += 1
-
-        if not hasattr(self, 'singled'):
-            self.singled = [index, 0]
-            self._reset_index(index)
-
-        if self.singled and self.singled[0] != index:
-            self.singled = [index, 0]
             self._reset_index(index)
 
         if self.max_cpu and stats['max_cpu'] > self.max_cpu:
@@ -189,15 +177,15 @@ class ResourceWatcher(BaseObserver):
             self.statsd.increment("_resource_watcher.%s.restarting" %
                                   self.watcher)
             # 传入特定信号以raise特定ResourceError
-            if self.singled[1] < self.max_count * 2:
-                if self.singled[1] == 0:
+            if self.singled[index] < self.max_count * 2:
+                if self.singled[index] == 0:
                     self.cast(
                         "signal",
                         name=self.watcher,
                         signum=signal.SIGXCPU,
                         recursive=True,
                     )
-                self.singled[1] += 1
+                self.singled[index] += 1
             else:
                 # 多次signal失败后，强杀
                 self.cast(
@@ -206,10 +194,13 @@ class ResourceWatcher(BaseObserver):
                     signum=signal.SIGKILL,
                     recursive=True,
                 )
-                self.singled[1] = 0
+                self.singled[index] = 0
                 self._reset_index(index)
 
+        self.looped += 1
+
         if self.looped % (self.max_count * 2) == 0:
+            self.singled[index] = 0
             self._reset_index(index)
 
     def _reset_index(self, index):

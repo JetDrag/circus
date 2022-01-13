@@ -107,16 +107,14 @@ class ResourceWatcher(BaseObserver):
         stats = info['info']
         if not stats:
             return
-        self.overlay_children_stats(stats.get('children', []), stats)
-
+        self.overlay_children_stats(list(stats.values())[0]['children'], stats)
         self._process_index('__all__', self._collect_data(stats))
 
     def overlay_children_stats(self, children_stats, root_stats):
         """将子进程资源占用合并入主进程"""
         for child_stats in children_stats:
             root_stats[child_stats['pid']] = child_stats
-            self.overlay_children_stats(child_stats.get('children', []),
-                                        root_stats)
+            self.overlay_children_stats(child_stats['children'], root_stats)
 
     def _process_index(self, index, stats):
         """仅支持单个watcher的增强改版处理策略"""
@@ -174,11 +172,11 @@ class ResourceWatcher(BaseObserver):
         if max([self._count_over_cpu[index], self._count_under_cpu[index],
                 self._count_over_mem[index], self._count_under_mem[index],
                 self._count_health[index]]) > self.max_count:
-            self.statsd.increment("_resource_watcher.%s.restarting" %
-                                  self.watcher)
             # 传入特定信号以raise特定ResourceError
             if self.singled[index] < self.max_count * 2:
                 if self.singled[index] == 0:
+                    self.statsd.increment("_resource_watcher.%s.resource_exhaustion" %
+                                          self.watcher)
                     self.cast(
                         "signal",
                         name=self.watcher,
@@ -187,6 +185,8 @@ class ResourceWatcher(BaseObserver):
                     )
                 self.singled[index] += 1
             else:
+                self.statsd.increment("_resource_watcher.%s.force_killed" %
+                                      self.watcher)
                 # 多次signal失败后，强杀
                 self.cast(
                     "signal",

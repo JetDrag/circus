@@ -10,6 +10,10 @@ import time
 import traceback
 import json
 import struct
+from inspect import isawaitable
+
+import tornado
+
 try:
     import yaml
 except ImportError:
@@ -28,6 +32,7 @@ except ImportError:
     pwd = None
 from tornado import gen
 from tornado import concurrent
+from tornado.ioloop import PeriodicCallback
 
 from configparser import (
     RawConfigParser, MissingSectionHeaderError, ParsingError, DEFAULTSECT
@@ -867,14 +872,22 @@ def load_virtualenv(watcher, py_ver=None):
         raise ValueError('copy_env must be True to to use virtualenv')
 
     if not py_ver:
-        py_ver = sys.version.split()[0][:3]
+        py_ver = "%s.%s" % sys.version_info[:2]
 
-    # XXX Posix scheme - need to add others
-    sitedir = os.path.join(watcher.virtualenv, 'lib', 'python' + py_ver,
-                           'site-packages')
+    def determine_sitedir():
+        try_dirs = ['python', 'pypy']
+        tried_dirs = []
+        for try_dir in try_dirs:
+            # XXX Posix scheme - need to add others
+            _sitedir = os.path.join(watcher.virtualenv, 'lib', '%s%s' % (try_dir, py_ver),
+                                    'site-packages')
+            tried_dirs.append(_sitedir)
+            if os.path.exists(_sitedir):
+                return _sitedir
 
-    if not os.path.exists(sitedir):
-        raise ValueError("%s does not exist" % sitedir)
+        raise ValueError("%s does not exist" % ','.join(tried_dirs))
+
+    sitedir = determine_sitedir()
 
     bindir = os.path.join(watcher.virtualenv, 'bin')
 
@@ -1101,3 +1114,23 @@ def check_future_exception_and_log(future):
                 exc_info = future.exc_info()
                 traceback.print_tb(exc_info[2])
             return exception
+
+
+if tornado.version_info[:2] >= (6, 2):
+    AsyncPeriodicCallback = PeriodicCallback
+else:
+    class AsyncPeriodicCallback(PeriodicCallback):
+
+        @gen.coroutine
+        def _run(self):
+            if not self._running:
+                return
+
+            try:
+                val = self.callback()
+                if val is not None and isawaitable(val):
+                    yield val
+            except Exception:
+                self.io_loop.handle_callback_exception(self.callback)
+            finally:
+                self._schedule_next()

@@ -241,11 +241,21 @@ class Arbiter(object):
 
     def _init_context(self, context):
         self.context = context or zmq.Context.instance()
-        if self.loop is None:
-            self.loop = ioloop.IOLoop.current()
+        self._ensure_ioloop()
         self.ctrl = Controller(self.endpoint, self.multicast_endpoint,
                                self.context, self.loop, self, self.check_delay,
                                self.endpoint_owner)
+
+    def _ensure_ioloop(self):
+        if self.loop is None:
+            self.loop = ioloop.IOLoop.current()
+
+        def handle_callback_exception(callback):
+            logger.error("Exception in callback %r", callback, exc_info=True)
+
+        if not hasattr(self.loop, 'handle_callback_exception'):
+            logger.info('Installing handle_callback_exception to loop')
+            setattr(self.loop, 'handle_callback_exception', handle_callback_exception)
 
     def get_socket(self, name):
         return self.sockets.get(name, None)
@@ -419,11 +429,21 @@ class Arbiter(object):
         cfg = get_config(config_file)
         watchers = []
         for watcher in cfg.get('watchers', []):
-            watchers.append(Watcher.load_from_config(watcher))
+            try:
+                _watcher = Watcher.load_from_config(watcher)
+            except Exception as e:
+                logger.warning('Failed to create watcher', exc_info=e)
+            else:
+                watchers.append(_watcher)
 
         sockets = []
         for socket_ in cfg.get('sockets', []):
-            sockets.append(CircusSocket.load_from_config(socket_))
+            try:
+                _socket = CircusSocket.load_from_config(socket_)
+            except Exception as e:
+                logger.warning('Failed to create socket', exc_info=e)
+            else:
+                sockets.append(_socket)
 
         httpd = cfg.get('httpd', False)
         if httpd:

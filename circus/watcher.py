@@ -13,7 +13,7 @@ from psutil import NoSuchProcess, TimeoutExpired
 import zmq.utils.jsonapi as json
 from tornado import ioloop
 
-from circus.process import Process, DEAD_OR_ZOMBIE, UNEXISTING, OTHER
+from circus.process import Process, DEAD_OR_ZOMBIE, UNEXISTING
 from circus.papa_process_proxy import PapaProcessProxy
 from circus import logger
 from circus import util

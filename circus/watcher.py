@@ -13,7 +13,7 @@ from psutil import NoSuchProcess, TimeoutExpired
 import zmq.utils.jsonapi as json
 from tornado import ioloop
 
-from circus.process import Process, DEAD_OR_ZOMBIE, UNEXISTING
+from circus.process import Process, DEAD_OR_ZOMBIE, UNEXISTING, OTHER
 from circus.papa_process_proxy import PapaProcessProxy
 from circus import logger
 from circus import util
@@ -463,7 +463,9 @@ class Watcher(object):
                     resulting_pid, status = os.waitpid(pid, os.WNOHANG)
                     if (resulting_pid, status) == (0, 0):
                         status = None
-                        time.sleep(timeout)
+                        if not self._worker.is_running():
+                            raise OSError(errno.ECHILD, 'PID of the process being queried has been reused over time.')
+                        yield tornado_sleep(timeout)
                         continue
                 except OSError as e:
                     if e.errno == errno.ECHILD:

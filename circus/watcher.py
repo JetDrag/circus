@@ -463,9 +463,9 @@ class Watcher(object):
                     resulting_pid, status = os.waitpid(pid, os.WNOHANG)
                     if (resulting_pid, status) == (0, 0):
                         status = None
-                        if not self._worker.is_running():
+                        if process._worker is not None and not process._worker.is_running():
                             raise OSError(errno.ECHILD, 'PID of the process being queried has been reused over time.')
-                        yield tornado_sleep(timeout)
+                        time.sleep(timeout)
                         continue
                 except OSError as e:
                     if e.errno == errno.ECHILD:
